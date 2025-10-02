@@ -43,13 +43,13 @@ docker run -d -p 8787:8787 -v $(pwd):/workspace stanfordhpds/base-rstudio:latest
 |-------|-------------|--------------|
 | `stanfordhpds/base` | Base image with common tools | Ubuntu 24.04, uv, rig, Quarto, Git |
 | `stanfordhpds/base-ssh` | Base + SSH server | For custom remote development setups |
-| `stanfordhpds/base-rstudio` | Base + RStudio Server | For custom web-based development |
-| `stanfordhpds/python-uv` | Python development with uv | Auto-detects Python version, fast dependency installation |
-| `stanfordhpds/python-uv-ssh` | Python + SSH server | Remote development with Positron |
-| `stanfordhpds/python-uv-rstudio` | Python + RStudio Server | Web-based IDE with Python support |
-| `stanfordhpds/r-renv` | R development with renv | Auto-detects R version, reproducible environments |
-| `stanfordhpds/r-renv-ssh` | R + SSH server | Remote R development |
-| `stanfordhpds/r-renv-rstudio` | R + RStudio Server | Full RStudio IDE experience |
+| `stanfordhpds/base-rstudio` | Base + RStudio Server | For custom web-based RStudio development |
+| `stanfordhpds/python-uv` | Python development with uv | Automated UV support |
+| `stanfordhpds/python-uv-ssh` | Python + SSH server | Remote development with SSH + automated uv support |
+| `stanfordhpds/python-uv-rstudio` | Python + RStudio Server | Web-based RStudio with Python support + automated uv support |
+| `stanfordhpds/r-renv` | R development with renv | Automated renv support |
+| `stanfordhpds/r-renv-ssh` | R + SSH server | Remote SSH development + automated renv support |
+| `stanfordhpds/r-renv-rstudio` | R + RStudio Server | Web-based RStudio + automated renv support |
 
 ## Examples
 
@@ -59,24 +59,19 @@ See the [`examples/`](examples/) directory for complete project examples:
 
 ## Building Images Locally
 
+All images are built for multiple architectures (linux/amd64, linux/arm64) using Docker Buildx.
+
+**Prerequisites:**
+- Docker with buildx support
+- Logged in to Docker Hub (`docker login`) with push access
+
 ```bash
-# Build base image
-docker build -t stanfordhpds/base:latest base/
+# Build and push all images (multi-architecture)
+./scripts/build-all.sh
 
-# Build Python images
-docker build -t stanfordhpds/python-uv:latest python/uv/
-
-# Build extension images
-./scripts/build-ssh-images.sh
-./scripts/build-rstudio-images.sh
+# Build and push specific image groups
+./scripts/build-python-images.sh
+./scripts/build-r-images.sh
 ```
 
-## Documentation
-
-- [Architecture Overview](docs/architecture.md)
-- [Implementation Guide](docs/implementation-guide.md)
-- [Contributing Guidelines](docs/contributing.md)
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.
+**Note:** Images are automatically pushed to Docker Hub during the build process (required by buildx for multi-platform builds).
