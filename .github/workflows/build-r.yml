@@ -1,0 +1,148 @@
+name: Build R Images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'r/**'
+      - '.github/workflows/build-r.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'r/**'
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Build Base Image"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  build-r-renv:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: stanfordhpds/r-renv
+          tags: |
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=4.4,enable={{is_default_branch}}
+
+      - name: Build and push r-renv
+        uses: docker/build-push-action@v6
+        with:
+          context: ./r/renv
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            DEFAULT_R_VERSION=release
+
+  build-ssh-images:
+    needs: build-r-renv
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - base: r-renv
+            target: r-renv-ssh
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push SSH image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./templates
+          file: ./templates/ssh-template.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: stanfordhpds/${{ matrix.target }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BASE_IMAGE=stanfordhpds/${{ matrix.base }}:latest
+
+  build-rstudio-images:
+    needs: build-r-renv
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - base: r-renv
+            target: r-renv-rstudio
+            working_dir: /project
+            install_reticulate: "false"
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push RStudio image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./templates
+          file: ./templates/rstudio-template.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: stanfordhpds/${{ matrix.target }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BASE_IMAGE=stanfordhpds/${{ matrix.base }}:latest
+            WORKING_DIR=${{ matrix.working_dir }}
+            INSTALL_RETICULATE=${{ matrix.install_reticulate }}

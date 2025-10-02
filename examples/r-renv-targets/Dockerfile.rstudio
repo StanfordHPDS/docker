@@ -1,0 +1,7 @@
+FROM stanfordhpds/r-renv-rstudio:latest
+
+# The ONBUILD instructions in r-renv-rstudio will:
+# 1. Copy renv.lock, renv/activate.R, .Rprofile
+# 2. Install the R version specified in renv.lock
+# 3. Restore all packages
+# 4. Copy the rest of the project files

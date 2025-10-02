@@ -1,0 +1,16 @@
+{
+	"name": "Mixed R Python",
+	"dockerComposeFile": "../compose.yml",
+	"service": "ssh",
+	"workspaceFolder": "/project",
+	"overrideCommand": true,
+	"runServices": ["ssh"],
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"REditorSupport.r",
+				"ms-python.python"
+			]
+		}
+	}
+}

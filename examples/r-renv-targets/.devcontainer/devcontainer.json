@@ -1,0 +1,23 @@
+{
+	"name": "R renv targets",
+	"dockerComposeFile": "../compose.yml",
+	"service": "analysis-ssh",
+	"workspaceFolder": "/project",
+	"overrideCommand": true,
+	"mounts": [
+		"source=${localWorkspaceFolder}/_targets,target=/project/_targets,type=bind",
+		"source=${localWorkspaceFolder}/outputs,target=/project/outputs,type=bind",
+		"source=${localWorkspaceFolder}/data,target=/project/data,type=bind",
+		"source=${localWorkspaceFolder}/reports,target=/project/reports,type=bind",
+		"source=${localWorkspaceFolder}/R,target=/project/R,type=bind",
+		"source=${localWorkspaceFolder}/_targets.R,target=/project/_targets.R,type=bind",
+		"source=${localWorkspaceFolder}/_targets_packages.R,target=/project/_targets_packages.R,type=bind"
+	],
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"REditorSupport.r"
+			]
+		}
+	}
+}

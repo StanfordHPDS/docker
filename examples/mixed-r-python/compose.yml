@@ -1,0 +1,49 @@
+services:
+  analysis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mixed-analysis
+    volumes:
+      - ./data:/project/data
+      - ./outputs:/project/outputs
+      - ./reports:/project/reports
+      - ./scripts:/project/scripts
+    command: make all
+
+  analysis-ssh:
+    build:
+      context: .
+      dockerfile: Dockerfile.ssh
+    image: mixed-analysis-ssh
+    profiles:
+      - ssh
+    ports:
+      - "2222:22"
+    working_dir: /project
+    volumes:
+      - ~/.ssh/id_ed25519.pub:/root/.ssh/authorized_keys
+      - ./data:/project/data
+      - ./outputs:/project/outputs
+      - ./reports:/project/reports
+      - ./scripts:/project/scripts
+      - ./Makefile:/project/Makefile
+
+  analysis-rstudio:
+    build:
+      context: .
+      dockerfile: Dockerfile.rstudio
+    image: mixed-analysis-rstudio
+    profiles:
+      - rstudio
+    ports:
+      - "8787:8787"
+    working_dir: /project
+    volumes:
+      - ./data:/project/data
+      - ./outputs:/project/outputs
+      - ./reports:/project/reports
+      - ./scripts:/project/scripts
+      - ./Makefile:/project/Makefile
+    environment:
+      - PASSWORD=rstudio

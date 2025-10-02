@@ -1,0 +1,6 @@
+_targets/
+outputs/
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata

@@ -1,0 +1,43 @@
+---
+title: "Python Pipeline Analysis Report"
+format: html
+---
+
+## Analysis Results
+
+This report summarizes the results from our Python data pipeline.
+
+```{python}
+#| echo: false
+import json
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Load results
+with open('../outputs/results.json', 'r') as f:
+    results = json.load(f)
+
+print(f"Mean Y: {results['mean_y']:.2f}")
+print(f"Std Y: {results['std_y']:.2f}")
+print(f"Correlation: {results['correlation']:.3f}")
+```
+
+## Visualization
+
+```{python}
+#| echo: false
+#| fig-cap: "Scatter plot of the data"
+
+# Load and plot data
+df = pd.read_csv('../data/processed/cleaned_data.csv')
+plt.figure(figsize=(10, 6))
+plt.scatter(df['x'], df['y'], alpha=0.6)
+plt.xlabel('X')
+plt.ylabel('Y')
+plt.title('Data Visualization')
+plt.show()
+```
+
+## Summary
+
+The analysis pipeline successfully processed the data and generated visualizations.

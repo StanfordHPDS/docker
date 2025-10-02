@@ -1,0 +1,200 @@
+---
+title: "Penguin Clustering Analysis"
+format: 
+  html:
+    toc: true
+    code-fold: true
+    theme: cosmo
+execute:
+  echo: true
+  warning: false
+---
+
+## Introduction
+
+This report demonstrates a mixed R and Python workflow analyzing the Palmer Penguins dataset. We use:
+
+- **Python**: Data fetching, preprocessing, and machine learning (clustering)
+- **R**: Visualization and statistical analysis
+- **Reticulate**: Bridging R and Python for seamless integration
+
+```{r setup}
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(gt)
+library(reticulate)
+library(here)
+
+# Use project Python environment
+use_virtualenv(here(".venv"), required = TRUE)
+```
+
+## Data Processing with Python
+
+We first fetch and preprocess the data using Python:
+
+```{python}
+import pandas as pd
+import json
+from pathlib import Path
+
+# Load processed data
+df = pd.read_csv("../data/processed/penguins_scaled.csv")
+print(f"Dataset shape: {df.shape}")
+print(f"Species: {df['species'].unique()}")
+
+# Load metadata
+with open("../data/processed/metadata.json", "r") as f:
+    metadata = json.load(f)
+print(f"\nRows after cleaning: {metadata['n_rows_clean']}")
+```
+
+## Clustering Analysis
+
+The clustering analysis groups penguins based on their physical measurements:
+
+```{python}
+# Load clustering results
+df_clustered = pd.read_csv("../data/processed/penguins_clustered.csv")
+
+# Show cluster distribution
+cluster_dist = df_clustered['cluster'].value_counts().sort_index()
+print("Cluster distribution:")
+print(cluster_dist)
+```
+
+## Visualizations with R
+
+Now we'll create visualizations using R:
+
+```{r}
+# Load the clustered data
+df <- read_csv(here("data/processed/penguins_clustered.csv"))
+
+# PCA visualization
+ggplot(df, aes(x = pca1, y = pca2)) +
+  geom_point(aes(color = factor(cluster), shape = species), 
+             size = 3, alpha = 0.7) +
+  scale_color_viridis_d(name = "Cluster", option = "plasma") +
+  labs(
+    title = "Penguin Clusters in PCA Space",
+    subtitle = "Colors represent k-means clusters, shapes represent species",
+    x = "First Principal Component",
+    y = "Second Principal Component"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+## Species Comparison
+
+Let's compare how the measurements vary across species:
+
+```{r}
+# Summary statistics by species
+summary_stats <- df |>
+  group_by(species) |>
+  summarise(
+    n = n(),
+    avg_bill_length = mean(bill_length_mm),
+    sd_bill_length = sd(bill_length_mm),
+    avg_flipper_length = mean(flipper_length_mm),
+    sd_flipper_length = sd(flipper_length_mm),
+    .groups = "drop"
+  )
+
+# Create formatted table
+summary_stats |>
+  gt() |>
+  tab_header(
+    title = "Summary Statistics by Species",
+    subtitle = "Standardized measurements"
+  ) |>
+  fmt_number(
+    columns = starts_with("avg_"),
+    decimals = 2
+  ) |>
+  fmt_number(
+    columns = starts_with("sd_"),
+    decimals = 2
+  ) |>
+  cols_label(
+    species = "Species",
+    n = "Count",
+    avg_bill_length = "Avg Bill Length",
+    sd_bill_length = "SD",
+    avg_flipper_length = "Avg Flipper Length",
+    sd_flipper_length = "SD"
+  ) |>
+  tab_style(
+    style = cell_fill(color = "lightblue"),
+    locations = cells_body(columns = species)
+  )
+```
+
+## Cluster vs Species Analysis
+
+How well do the clusters align with the actual species?
+
+```{r}
+# Create confusion matrix
+cluster_species <- df |>
+  group_by(cluster, species) |>
+  summarise(count = n(), .groups = "drop") |>
+  tidyr::pivot_wider(names_from = species, values_from = count, values_fill = 0)
+
+# Heatmap
+cluster_species |>
+  tidyr::pivot_longer(cols = -cluster, names_to = "species", values_to = "count") |>
+  ggplot(aes(x = factor(cluster), y = species, fill = count)) +
+  geom_tile() +
+  geom_text(aes(label = count), color = "white", size = 6) +
+  scale_fill_viridis_c(option = "viridis") +
+  labs(
+    title = "Cluster Composition by Species",
+    subtitle = "How species are distributed across clusters",
+    x = "Cluster",
+    y = "Species",
+    fill = "Count"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_text(size = 12),
+    plot.title = element_text(size = 16, face = "bold")
+  )
+```
+
+## Python-R Integration
+
+Using reticulate, we can seamlessly work with both languages:
+
+```{r}
+# Access Python objects from R
+py_data <- py$df_clustered
+cat("Accessed Python dataframe from R with", nrow(py_data), "rows\n")
+
+# Run Python code from R
+py_run_string("
+import numpy as np
+cluster_centers = np.array(metadata['cluster_centers'])
+print(f'Cluster centers shape: {cluster_centers.shape}')
+")
+
+# Get the cluster centers in R
+cluster_centers <- py$cluster_centers
+cat("\nCluster center for first cluster:\n")
+print(round(cluster_centers[1,], 3))
+```
+
+## Conclusions
+
+This analysis demonstrates:
+
+1. **Effective data preprocessing** using Python's scikit-learn for standardization
+2. **Unsupervised learning** with k-means clustering revealing natural groupings
+3. **Beautiful visualizations** using R's ggplot2 and gt packages
+4. **Seamless integration** between R and Python using reticulate
+
+The three clusters roughly correspond to the three penguin species, though there's some overlap, particularly between Adelie and Chinstrap penguins. This suggests that physical measurements alone can largely distinguish between species, but additional features might improve classification accuracy.

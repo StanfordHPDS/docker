@@ -1,0 +1,32 @@
+#!/bin/bash
+# Push all Docker images to Docker Hub
+
+set -e
+
+echo "Pushing all Stanford HPDS Docker images to Docker Hub..."
+echo "==========================================================="
+echo "Note: You must be logged in to Docker Hub with push access"
+echo ""
+
+# Push base images
+echo "Pushing base images..."
+docker push stanfordhpds/base:latest
+docker push stanfordhpds/base-ssh:latest
+docker push stanfordhpds/base-rstudio:latest
+
+# Push Python images
+echo -e "\nPushing Python images..."
+docker push stanfordhpds/python-uv-core:latest
+docker push stanfordhpds/python-uv:latest
+docker push stanfordhpds/python-uv-ssh:latest
+docker push stanfordhpds/python-uv-rstudio:latest
+
+# Push R images
+echo -e "\nPushing R images..."
+docker push stanfordhpds/r-renv-core:latest
+docker push stanfordhpds/r-renv:latest
+docker push stanfordhpds/r-renv-ssh:latest
+docker push stanfordhpds/r-renv-rstudio:latest
+
+echo -e "\n==========================================================="
+echo "All images pushed successfully!"

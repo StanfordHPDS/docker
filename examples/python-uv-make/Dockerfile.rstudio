@@ -1,0 +1,7 @@
+FROM stanfordhpds/python-uv-rstudio:latest
+
+# The ONBUILD instructions in python-uv-rstudio will:
+# 1. Copy pyproject.toml, uv.lock, .python-version (if present)
+# 2. Install the Python version required
+# 3. Create virtual environment and install dependencies
+# 4. Copy the rest of the project files

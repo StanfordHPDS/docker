@@ -1,0 +1,47 @@
+services:
+  analysis:
+    build: .
+    image: my-analysis
+    volumes:
+      - ./_targets:/project/_targets
+      - ./outputs:/project/outputs
+      - ./data:/project/data
+      - ./reports:/project/reports
+      - ./R:/project/R
+    command: R -e "targets::tar_make()"
+
+  analysis-ssh:
+    build:
+      context: .
+      dockerfile: Dockerfile.ssh
+    image: my-analysis-ssh
+    profiles:
+      - ssh
+    ports:
+      - "2222:22"
+    working_dir: /project
+    volumes:
+      - ~/.ssh/id_ed25519.pub:/root/.ssh/authorized_keys
+      - ./_targets:/project/_targets
+      - ./outputs:/project/outputs
+      - ./data:/project/data
+      - ./reports:/project/reports
+      - ./R:/project/R
+      - ./_targets.R:/project/_targets.R
+      - ./_targets_packages.R:/project/_targets_packages.R
+
+  analysis-rstudio:
+    build:
+      context: .
+      dockerfile: Dockerfile.rstudio
+    image: my-analysis-rstudio
+    profiles:
+      - rstudio
+    ports:
+      - "8787:8787"
+    volumes:
+      - ./_targets:/project/_targets
+      - ./outputs:/project/outputs
+      - ./data:/project/data
+      - ./reports:/project/reports
+      - ./R:/project/R

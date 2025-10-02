@@ -1,0 +1,148 @@
+name: Build Python Images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'python/**'
+      - '.github/workflows/build-python.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'python/**'
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Build Base Image"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  build-python-uv:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: stanfordhpds/python-uv
+          tags: |
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=3.12,enable={{is_default_branch}}
+
+      - name: Build and push python-uv
+        uses: docker/build-push-action@v6
+        with:
+          context: ./python/uv
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            DEFAULT_PYTHON_VERSION=3.12
+
+  build-ssh-images:
+    needs: build-python-uv
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - base: python-uv
+            target: python-uv-ssh
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push SSH image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./templates
+          file: ./templates/ssh-template.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: stanfordhpds/${{ matrix.target }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BASE_IMAGE=stanfordhpds/${{ matrix.base }}:latest
+
+  build-rstudio-images:
+    needs: build-python-uv
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - base: python-uv
+            target: python-uv-rstudio
+            working_dir: /workspace
+            install_reticulate: "true"
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push RStudio image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./templates
+          file: ./templates/rstudio-template.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: stanfordhpds/${{ matrix.target }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BASE_IMAGE=stanfordhpds/${{ matrix.base }}:latest
+            WORKING_DIR=${{ matrix.working_dir }}
+            INSTALL_RETICULATE=${{ matrix.install_reticulate }}

@@ -1,0 +1,54 @@
+---
+title: "Analysis Report"
+format: html
+execute:
+  echo: false
+---
+
+```{r}
+#| label: setup
+library(targets)
+library(tidyverse)
+library(gt)
+```
+
+## Data Analysis
+
+This report summarizes the analysis pipeline results.
+
+### Model Summary
+
+```{r}
+#| label: model-summary
+tar_read(model) |>
+  summary()
+```
+
+### Visualization
+
+```{r}
+#| label: plot
+#| fig-cap: "Scatter plot with model fit"
+tar_read(plot)
+```
+
+### Data Summary
+
+```{r}
+#| label: data-summary
+tar_read(processed_data) |>
+  group_by(group) |>
+  summarise(
+    mean_y = mean(y),
+    sd_y = sd(y),
+    n = n()
+  ) |>
+  gt() |>
+  tab_header(
+    title = "Summary Statistics by Group"
+  ) |>
+  fmt_number(
+    columns = c(mean_y, sd_y),
+    decimals = 2
+  )
+```
